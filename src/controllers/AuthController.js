@@ -27,30 +27,15 @@ class auth {
         res.json({ success: false });
         return;
       }
-      await AccessToken.destroy({
-        where: {
-          userId: user.id,
-        },
-      });
-      const payload = { username: username };
-      const accessToken = await generateToken(
-        payload,
-        ACCESS_TOKEN_SECRET,
-        ACCESS_TOKEN_LIFE
-      );
-
-      await AccessToken.create({
-        userId: user.dataValues.id,
-        accessToken: accessToken,
-      });
-
-      let refreshToken = await RefreshToken.findOne({
+      let refreshToken = "";
+      const payload = { username: username, userId: user.id };
+      const dataRefreshToken = await RefreshToken.findOne({
         where: {
           userId: user.id,
         },
       });
 
-      if (!refreshToken) {
+      if (!dataRefreshToken) {
         refreshToken = await generateToken(
           payload,
           REFRESH_TOKEN_SECRET,
@@ -60,9 +45,16 @@ class auth {
           userId: user.dataValues.id,
           refreshToken: refreshToken,
         });
+      } else {
+        refreshToken = dataRefreshToken.dataValues.refreshToken;
       }
-      res.cookie("refreshToken", refreshToken, { httpOnly: true });
-      res.json({ success: true, accessToken: accessToken });
+      console.log(refreshToken);
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        maxAge: 7 * 60 * 60 * 1000,
+        secure: false,
+      });
+      res.json({ success: true, uid: user.id });
     } catch (err) {
       res.status(400).json({ success: false, message: "ERROR" });
       console.log(err);
@@ -72,7 +64,7 @@ class auth {
 
   async home(req, res) {
     const a = 10;
-    res.cookie("a", a);
+    res.cookie("a123", a);
     res.cookie("abc", "123", { httpOnly: true });
     res.json("home");
   }
@@ -87,41 +79,33 @@ class auth {
 
   async refreshToken(req, res) {
     try {
-      console.log("cookies: ");
-      console.log(req.cookies);
-      const authorHeader = req.headers?.authorization;
-      if (!authorHeader) {
-        res.json({ success: false, message: "missing access token in header" });
-        return;
-      }
-      const accessToken = authorHeader.split(" ")?.[1];
-      if (!accessToken) {
-        res.json({ success: false, message: "missing access token in header" });
-        return;
-      }
+      console.log("refresh endpoint");
+      // console.log("cookies: ", req.cookies);
+      const REFRESH_TOKEN = req.cookies.refreshToken;
+      console.log(REFRESH_TOKEN);
       const decoded = await jwt.verify(
-        accessToken,
-        process.env.ACCESS_TOKEN_SECRET,
-        {
-          ignoreExpiration: true,
-        }
+        REFRESH_TOKEN || "",
+        REFRESH_TOKEN_SECRET
       );
       if (!decoded) {
-        res.json({ success: false, message: "Invalid token" });
+        res.status(400).json({ success: false, message: "Invalid token" });
+        return;
       }
-      await AccessToken.destroy({
-        where: {
-          accessToken: accessToken,
-        },
-      });
-      const payload = { username: decoded.username };
+      const payload = { username: decoded.username, userId: decoded.userId };
       const newAccessToken = await generateToken(
         payload,
-        accessToken,
-        process.env.ACCESS_TOKEN_LIFE
+        ACCESS_TOKEN_SECRET,
+        ACCESS_TOKEN_LIFE
       );
+      await AccessToken.destroy({
+        where: {
+          userId: decoded.userId,
+        },
+      });
+      await AccessToken.create({ accessToken: newAccessToken });
       res.json({ success: true, accessToken: newAccessToken });
     } catch (err) {
+      console.log(err);
       res.status(400).json({ success: false, message: "Invalid Token" });
       return;
     }

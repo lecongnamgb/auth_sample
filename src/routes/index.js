@@ -6,6 +6,6 @@ module.exports = function route(app) {
   //   app.get("/home", passport.authenticate("jwt"), AuthController.home);
   app.post("/login", AuthController.login);
   app.get("/home", AuthController.home);
-  app.post("/api/register", AuthController.register);
-  app.get("/api/refreshToken", AuthController.refreshToken);
+  app.post("/register", AuthController.register);
+  app.post("/api/refreshToken", AuthController.refreshToken);
 };
