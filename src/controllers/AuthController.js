@@ -82,7 +82,7 @@ class auth {
       console.log("refresh endpoint");
       // console.log("cookies: ", req.cookies);
       const REFRESH_TOKEN = req.cookies.refreshToken;
-      console.log(REFRESH_TOKEN);
+      console.log("refresh Token:", REFRESH_TOKEN);
       const decoded = await jwt.verify(
         REFRESH_TOKEN || "",
         REFRESH_TOKEN_SECRET
@@ -103,6 +103,7 @@ class auth {
         },
       });
       await AccessToken.create({ accessToken: newAccessToken });
+      console.log(newAccessToken);
       res.json({ success: true, accessToken: newAccessToken });
     } catch (err) {
       console.log(err);

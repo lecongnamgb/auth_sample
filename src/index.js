@@ -8,7 +8,6 @@ const cookieParser = require("cookie-parser");
 
 const PORT = process.env.PORT || 5000;
 
-console.log(process.env.ACCESS_TOKEN_SECRET);
 const app = express();
 const originArr = ["http://localhost:3000"];
 const originStr = originArr.join(",");
